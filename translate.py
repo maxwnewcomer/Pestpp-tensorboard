@@ -26,64 +26,64 @@ inputdir = rootdir + '/input'
 #################
 
 class Tensorboard:
-    def __init__(self, logdir):
-        self.writer = tf.compat.v1.summary.FileWriter(logdir)
-        self.logdir = logdir
+	def __init__(self, logdir):
+	    self.writer = tf.compat.v1.summary.FileWriter(logdir)
+	    self.logdir = logdir
 
-    def open(self):
+	def open(self):
+		pass
 
+	def close(self):
+	    self.writer.close()
 
-    def close(self):
-        self.writer.close()
+	def log_scalar(self, tag, value, global_step):
+	    summary = tf.compat.v1.Summary()
+	    summary.value.add(tag=tag, simple_value=value)
+	    self.writer.add_summary(summary, global_step=global_step)
+	    self.writer.flush()
 
-    def log_scalar(self, tag, value, global_step):
-        summary = tf.compat.v1.Summary()
-        summary.value.add(tag=tag, simple_value=value)
-        self.writer.add_summary(summary, global_step=global_step)
-        self.writer.flush()
+	def log_histogram(self, tag, values, global_step, bins):
+	    counts, bin_edges = np.histogram(values, bins=bins)
 
-    def log_histogram(self, tag, values, global_step, bins):
-        counts, bin_edges = np.histogram(values, bins=bins)
+	    hist = tf.compat.v1.HistogramProto()
+	    hist.min = float(np.min(values))
+	    hist.max = float(np.max(values))
+	    hist.num = int(np.prod(values.shape))
+	    hist.sum = float(np.sum(values))
+	    hist.sum_squares = float(np.sum(values**2))
 
-        hist = tf.compat.v1.HistogramProto()
-        hist.min = float(np.min(values))
-        hist.max = float(np.max(values))
-        hist.num = int(np.prod(values.shape))
-        hist.sum = float(np.sum(values))
-        hist.sum_squares = float(np.sum(values**2))
+	    bin_edges = bin_edges[1:]
 
-        bin_edges = bin_edges[1:]
+	    for edge in bin_edges:
+	        hist.bucket_limit.append(edge)
+	    for c in counts:
+	        hist.bucket.append(c)
 
-        for edge in bin_edges:
-            hist.bucket_limit.append(edge)
-        for c in counts:
-            hist.bucket.append(c)
+	    summary = tf.compat.v1.Summary()
+	    summary.value.add(tag=tag, histo=hist)
+	    self.writer.add_summary(summary, global_step=global_step)
+	    self.writer.flush()
 
-        summary = tf.compat.v1.Summary()
-        summary.value.add(tag=tag, histo=hist)
-        self.writer.add_summary(summary, global_step=global_step)
-        self.writer.flush()
+	def log_plot(self, tag, figure, global_step):
+	    plot_buf = io.BytesIO()
+	    figure.savefig(plot_buf, format='png')
+	    plot_buf.seek(0)
+	    img = Image.open(plot_buf)
+	    img_ar = np.array(img)
 
-    def log_plot(self, tag, figure, global_step):
-        plot_buf = io.BytesIO()
-        figure.savefig(plot_buf, format='png')
-        plot_buf.seek(0)
-        img = Image.open(plot_buf)
-        img_ar = np.array(img)
+	    img_summary = tf.Summary.Image(encoded_image_string=plot_buf.getvalue(),
+	                               height=img_ar.shape[0],
+	                               width=img_ar.shape[1])
 
-        img_summary = tf.Summary.Image(encoded_image_string=plot_buf.getvalue(),
-                                   height=img_ar.shape[0],
-                                   width=img_ar.shape[1])
-
-        summary = tf.compat.v1.Summary()
-        summary.value.add(tag=tag, image=img_summary)
-        self.writer.add_summary(summary, global_step=global_step)
-        self.writer.flush()
-    def log_hparams(self, hparams, run_dir):
-        with tf.summary.create_file_writer(run_dir).as_default():
-            hp.hparams(hparams)  # record the values used in this trial
-            accuracy = train_test_model(hparams)
-            tf.summary.scalar(METRIC_ACCURACY, accuracy, step=1)
+	    summary = tf.compat.v1.Summary()
+	    summary.value.add(tag=tag, image=img_summary)
+	    self.writer.add_summary(summary, global_step=global_step)
+	    self.writer.flush()
+	def log_hparams(self, hparams, run_dir):
+	    with tf.summary.create_file_writer(run_dir).as_default():
+	        hp.hparams(hparams)  # record the values used in this trial
+	        accuracy = train_test_model(hparams)
+	        tf.summary.scalar(METRIC_ACCURACY, accuracy, step=1)
 
 # To end program with ^c
 def signal_handler(signal, frame):
