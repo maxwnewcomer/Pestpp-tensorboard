@@ -31,10 +31,15 @@ class Tensorboard:
 	    self.logdir = logdir
 
 	def open(self):
-		pass
+		tb = program.TensorBoard()
+		tb.configure(argv=[None, '--logdir', '/' + os.path.join(*self.logdir.split('/')[0:-1]) + '/'])
+		url = tb.launch()
+		print('TensorBoard is opened at :', url)
+		print('\nPress ^C to close Tensorboard')
 
 	def close(self):
-	    self.writer.close()
+		self.writer.close()
+		print('\nI hope your ending me because your model ran successfully!')
 
 	def log_scalar(self, tag, value, global_step):
 	    summary = tf.compat.v1.Summary()
@@ -79,25 +84,18 @@ class Tensorboard:
 	    summary.value.add(tag=tag, image=img_summary)
 	    self.writer.add_summary(summary, global_step=global_step)
 	    self.writer.flush()
-	def log_hparams(self, hparams, run_dir):
-	    with tf.summary.create_file_writer(run_dir).as_default():
-	        hp.hparams(hparams)  # record the values used in this trial
-	        accuracy = train_test_model(hparams)
-	        tf.summary.scalar(METRIC_ACCURACY, accuracy, step=1)
+
+	# def log_hparams(self, hparams, run_dir):
+	#     with tf.summary.create_file_writer(run_dir).as_default():
+	#         hp.hparams(hparams)  # record the values used in this trial
+	#         accuracy = train_test_model(hparams)
+	#         tf.summary.scalar(METRIC_ACCURACY, accuracy, step=1)
 
 # To end program with ^c
 def signal_handler(signal, frame):
     global interrupted
     interrupted = True
 signal.signal(signal.SIGINT, signal_handler)
-
-# nameFormat
-if args['logname'].lower() == 'datetime':
-    nameFormat = time.strftime("%b %d %Y %H:%M:%S", time.gmtime())
-if args['logname'].lower() == 'runname':
-    for file in os.listdir(inputdir):
-        if file.endswith(".iobj"):
-            nameFormat = file[:-5]
 
 # variable initializtion
 iobjepoch = 0
@@ -169,40 +167,46 @@ def check_isen():
     if isenupdate:
         isenepoch += 1
 
-def saveHyperParams():
-    HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([16, 32]))
-    HP_DROPOUT = hp.HParam('dropout', hp.RealInterval(0.1, 0.2))
-    HP_OPTIMIZER = hp.HParam('optimizer', hp.Discrete(['adam', 'sgd']))
+# def saveHyperParams():
+#     HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([16, 32]))
+#     HP_DROPOUT = hp.HParam('dropout', hp.RealInterval(0.1, 0.2))
+#     HP_OPTIMIZER = hp.HParam('optimizer', hp.Discrete(['adam', 'sgd']))
+#
+#     METRIC_ACCURACY = 'accuracy'
+#
+#     with tf.summary.create_file_writer(rootdir + '/logs/hparam_tuning').as_default():
+#         hp.hparams_config(hparams=[HP_NUM_UNITS, HP_DROPOUT, HP_OPTIMIZER],
+#                           metrics=[hp.Metric(METRIC_ACCURACY, display_name='Accuracy')])
+#     for num_units in HP_NUM_UNITS.domain.values:
+#         for dropout_rate in (HP_DROPOUT.domain.min_value, HP_DROPOUT.domain.max_value):
+#             for optimizer in HP_OPTIMIZER.domain.values:
+#                 hparams = {
+#                   HP_NUM_UNITS: num_units,
+#                   HP_DROPOUT: dropout_rate,
+#                   HP_OPTIMIZER: optimizer,
+#                 }
+#                 run('logs/hparam_tuning/' + , hparams)
 
-    METRIC_ACCURACY = 'accuracy'
-
-    with tf.summary.create_file_writer('logs/hparam_tuning').as_default():
-        hp.hparams_config(hparams=[HP_NUM_UNITS, HP_DROPOUT, HP_OPTIMIZER],
-                          metrics=[hp.Metric(METRIC_ACCURACY, display_name='Accuracy')])
-    for num_units in HP_NUM_UNITS.domain.values:
-        for dropout_rate in (HP_DROPOUT.domain.min_value, HP_DROPOUT.domain.max_value):
-            for optimizer in HP_OPTIMIZER.domain.values:
-                hparams = {
-                  HP_NUM_UNITS: num_units,
-                  HP_DROPOUT: dropout_rate,
-                  HP_OPTIMIZER: optimizer,
-                }
-                run_name = "run-%d" % session_num
-                print('--- Starting trial: %s' % run_name)
-                print({h.name: hparams[h] for h in hparams})
-                run('logs/hparam_tuning/' + run_name, hparams)
+# nameFormat
+if args['logname'].lower() == 'datetime':
+	nameFormat = time.strftime("%b %d %Y %H:%M:%S", time.gmtime())
+if args['logname'].lower() == 'runname':
+	for file in os.listdir(inputdir):
+		if file.endswith(".iobj"):
+			nameFormat = file[:-5]
+	for file in os.listdir(rootdir + '/logs/'):
+		if file.endswith(nameFormat):
+			nameFormat = nameFormat + ' ' + time.strftime("%b %d %Y %H:%M:%S", time.gmtime())
 
 tensorboard = Tensorboard(rootdir + ('/logs/{}'.format(nameFormat)))
 tensorboard.open()
 interrupted = False
-print('Press ^C to quit translation of data to Tensorboard')
 
 while(True):
-    time.sleep(5) #for demo
+    time.sleep(.25) #for demo
     check_iobj()
     check_ipar()
     check_isen()
     if interrupted:
         tensorboard.close()
-        print('\nI hope your ending me because your model ran successfully!')
         break
