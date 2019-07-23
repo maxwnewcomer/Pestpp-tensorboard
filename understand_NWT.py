@@ -53,7 +53,7 @@ def saveHyperParams(tb):
     HP_IBOTAV = hp.HParam('ibotav', hp.Discrete([0, 1]))
     HP_IDROPTOL = hp.HParam('idroptol', hp.Discrete([0, 1]))
     HP_ILUMETHOD = hp.HParam('ilumethod', hp.Discrete([1, 2]))
-    HP_IPRNWT = hp.HParam('iprnwt', hp.Discrete([0, 2]))
+    HP_IPRNWT = hp.HParam('iprnwt', hp.IntInterval(0, 2))
     HP_IREDSYS= hp.HParam('iredsys', hp.Discrete([0, 1]))
     HP_LEVEL= hp.HParam('level', hp.IntInterval(0, 10))
     HP_LEVFILL= hp.HParam('levfill', hp.IntInterval(0, 10))
@@ -69,11 +69,12 @@ def saveHyperParams(tb):
     HP_RRCTOLS = hp.HParam('rrctols', hp.RealInterval(0., .0001))
     HP_STOPTOL = hp.HParam('stoptol', hp.RealInterval(.000000000001, .00000001))
     HP_THICKFACT = hp.HParam('thickfact', hp.RealInterval(.000001, .0005))
-    HP_RUNNUM = hp.HParam('Run Number', hp.IntInterval(0, maxrun))
+
     METRIC_SPEED = 'Elapsed_min'
 
     with tf.summary.create_file_writer(rootdir + '/logs/hparam_tuning').as_default():
-        hp.hparams_config(hparams=[HP_RUNNUM, HP_BACKFLAG, HP_BACKREDUCE, HP_BACKTOL, HP_DBDGAMMA,
+        hp.hparams_config(hparams=[HP_BACKFLAG,
+                                   HP_BACKREDUCE, HP_BACKTOL, HP_DBDGAMMA,
                                    HP_DBDKAPPA, HP_DBDTHETA, HP_EPSRN, HP_FLUXTOL,
                                    HP_HCLOSEXMD, HP_HEADTOL, HP_IACL, HP_IBOTAV,
                                    HP_IDROPTOL, HP_ILUMETHOD, HP_IPRNWT, HP_IREDSYS,
@@ -115,11 +116,10 @@ def saveHyperParams(tb):
             HP_RRCTOLS: run.rrctols,
             HP_STOPTOL: run.stoptol,
             HP_THICKFACT: run.thickfact,
-            HP_RUNNUM: run.Test
         }
         Elapsed_min = run.Elapsed_min
         tb.log_hparams(hparams, Elapsed_min, str(run.Test))
-        print(type(run.stoptol))
+        print(run.iprnwt)
 tensorboard = Tensorboard(rootdir + '/logs/hparam_tuning')
 saveHyperParams(tensorboard)
 tensorboard.open()
