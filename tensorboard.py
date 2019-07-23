@@ -208,5 +208,3 @@ while(True):
     if interrupted:
         tensorboard.close()
         break
-
-saveHyperParams()
