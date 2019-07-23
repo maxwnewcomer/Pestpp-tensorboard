@@ -84,11 +84,6 @@ class Tensorboard:
 	    self.writer.add_summary(summary, global_step=global_step)
 	    self.writer.flush()
 
-	def log_hparams(self, hparams, accuracy, writedir):
-	    with tf.summary.create_file_writer(writedir).as_default():
-	        hp.hparams(hparams)  # record the values used in this trial
-	        tf.summary.scalar(METRIC_ACCURACY, accuracy, step=1)
-
 # To end program with ^c
 def signal_handler(signal, frame):
     global interrupted
@@ -164,26 +159,6 @@ def check_isen():
     old_isen = isen[0:isenepoch+1]
     if isenupdate:
         isenepoch += 1
-
-def saveHyperParams():
-    HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([16, 32]))
-    HP_DROPOUT = hp.HParam('dropout', hp.RealInterval(0.1, 0.2))
-    HP_OPTIMIZER = hp.HParam('optimizer', hp.Discrete(['adam', 'sgd']))
-
-    METRIC_ACCURACY = 'accuracy'
-
-    with tf.summary.create_file_writer(rootdir + '/logs/hparam_tuning').as_default():
-        hp.hparams_config(hparams=[HP_NUM_UNITS, HP_DROPOUT, HP_OPTIMIZER],
-                          metrics=[hp.Metric(METRIC_ACCURACY, display_name='Accuracy')])
-    for num_units in HP_NUM_UNITS.domain.values:
-        for dropout_rate in (HP_DROPOUT.domain.min_value, HP_DROPOUT.domain.max_value):
-            for optimizer in HP_OPTIMIZER.domain.values:
-                hparams = {
-                  HP_NUM_UNITS: num_units,
-                  HP_DROPOUT: dropout_rate,
-                  HP_OPTIMIZER: optimizer,
-                }
-                tensorboard.log_hparams(writedir=rootdir + 'logs/hparam_tuning/' + , hparams=hparams, accuracy=)
 
 # nameFormat
 if args['logname'].lower() == 'datetime':
