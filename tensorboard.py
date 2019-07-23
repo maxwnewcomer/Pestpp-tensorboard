@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tensorboard import program
-from tensorboard.plugins.hparams import api as hp
 
 rootdir = os.path.dirname(os.path.abspath(__file__))
 ap = argparse.ArgumentParser()

@@ -1,5 +1,9 @@
 import os
 import argparse
+import pandas as pd
+import tensorflow as tf
+from tensorboard import program
+from tensorboard.plugins.hparams import api as hp
 
 rootdir = os.path.dirname(os.path.abspath(__file__))
 ap = argparse.ArgumentParser()
@@ -28,13 +32,15 @@ class Tensorboard:
 		self.writer.close()
 		print('\nI hope your ending me because your model ran successfully!')
 
-    def log_hparams(self, hparams, accuracy, writedir):
-	    with tf.summary.create_file_writer(writedir).as_default():
+    def log_hparams(self, hparams, Elapsed_min):
+	    with tf.summary.create_file_writer(self.logdir + '/hparam_tuning/' + hparams).as_default():
 	        hp.hparams(hparams)  # record the values used in this trial
-	        tf.summary.scalar(METRIC_ACCURACY, accuracy, step=1)
+	        tf.summary.scalar(METRIC_SPEED, Elapsed_min, step=1)
 
 def saveHyperParams():
     tb = Tensorboard(rootdir + '/logs')
+    hparamdf =
+
     HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([16, 32]))
     HP_DROPOUT = hp.HParam('dropout', hp.RealInterval(0.1, 0.2))
     HP_OPTIMIZER = hp.HParam('optimizer', hp.Discrete(['adam', 'sgd']))
@@ -44,12 +50,13 @@ def saveHyperParams():
     with tf.summary.create_file_writer(rootdir + '/logs/hparam_tuning').as_default():
         hp.hparams_config(hparams=[HP_NUM_UNITS, HP_DROPOUT, HP_OPTIMIZER],
                           metrics=[hp.Metric(METRIC_SPEED, display_name='Elapsed_min')])
-    for num_units in HP_NUM_UNITS.domain.values:
-        for dropout_rate in (HP_DROPOUT.domain.min_value, HP_DROPOUT.domain.max_value):
-            for optimizer in HP_OPTIMIZER.domain.values:
+    # for num_units in HP_NUM_UNITS.domain.values:
+    #     for dropout_rate in (HP_DROPOUT.domain.min_value, HP_DROPOUT.domain.max_value):
+    #         for optimizer in HP_OPTIMIZER.domain.values:
+        for row in
                 hparams = {
                   HP_NUM_UNITS: num_units,
                   HP_DROPOUT: dropout_rate,
                   HP_OPTIMIZER: optimizer,
                 }
-                tensorboard.log_hparams(writedir=rootdir + '/logs/hparam_tuning/' + , hparams=hparams, accuracy=)
+                tensorboard.log_hparams(hparams, Elapsed_min)
