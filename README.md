@@ -7,7 +7,7 @@ run_tensorboard.py provides users with the ability to see live loss, metric, and
 *--logname is for logname customization*  
 
 ##### How can you use this resource?  
-- By tracking weights and loss live, you can easily stop a failed run before waste possible hours of computation time
+- By tracking weights and loss live, you can easily stop a failed run before wasting possible hours of computation time
 - Easy comparison between runs, allowing for you to tune your models with a visual understanding of your model
 
 **understand_NWT.py**  
