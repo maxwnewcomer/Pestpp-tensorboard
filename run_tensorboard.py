@@ -11,8 +11,7 @@ from tensorboard import program
 
 rootdir = os.path.dirname(os.path.abspath(__file__))
 ap = argparse.ArgumentParser()
-###in production change reuqired to True
-ap.add_argument('--inputdir', required=False,
+ap.add_argument('--inputdir', required=True,
 	help='path to log directory of PEST++ output files')
 ap.add_argument('--logname', required=False, default='runname',
     help='log file names for model iteration identification\nOptions\n — datetime\n — runname\n')
@@ -20,7 +19,7 @@ args = vars(ap.parse_args())
 inputdir = args['inputdir']
 
 ###FOR TESTING###
-inputdir = rootdir + '/input'
+# inputdir = rootdir + '/input'
 #################
 
 class Tensorboard:
@@ -175,7 +174,7 @@ signal.signal(signal.SIGINT, signal_handler)
 interrupted = False
 
 while(not interrupted):
-    time.sleep(.25) #for demo
+    # time.sleep(.25) #for demo
     check_iobj()
     check_ipar()
     check_isen()

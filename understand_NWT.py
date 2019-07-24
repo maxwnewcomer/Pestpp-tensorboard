@@ -7,19 +7,19 @@ import tensorflow as tf
 from tensorboard import program
 from tensorboard.plugins.hparams import api as hp
 
+##Disable annoying tensorboard http requests
 logging.disable(logging.ERROR)
 
 rootdir = os.path.dirname(os.path.abspath(__file__))
 ap = argparse.ArgumentParser()
-###in production change reuqired to True
-ap.add_argument('--filepath', required=False,
+ap.add_argument('--filepath', required=True,
 	help='path to log directory of PEST++ output files')
 args = vars(ap.parse_args())
 filepath = args['filepath']
 
-###FOR TESTING###
-filepath = rootdir + '/input/NWT_Explore_out.csv'
-#################
+# ###FOR TESTING###
+# filepath = rootdir + '/input/NWT_Explore_out.csv'
+# #################
 
 class Tensorboard:
     def __init__(self, logdir):
