@@ -1,10 +1,13 @@
 import os
 import argparse
 import signal
+import logging
 import pandas as pd
 import tensorflow as tf
 from tensorboard import program
 from tensorboard.plugins.hparams import api as hp
+
+logging.disable(logging.ERROR)
 
 rootdir = os.path.dirname(os.path.abspath(__file__))
 ap = argparse.ArgumentParser()
@@ -119,7 +122,6 @@ def saveHyperParams(tb):
         }
         Elapsed_min = run.Elapsed_min
         tb.log_hparams(hparams, Elapsed_min, str(run.Test))
-        print(run.iprnwt)
 tensorboard = Tensorboard(rootdir + '/logs/hparam_tuning')
 saveHyperParams(tensorboard)
 tensorboard.open()
