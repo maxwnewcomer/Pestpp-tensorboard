@@ -83,12 +83,6 @@ class Tensorboard:
 	    self.writer.add_summary(summary, global_step=global_step)
 	    self.writer.flush()
 
-# To end program with ^c
-def signal_handler(signal, frame):
-    global interrupted
-    interrupted = True
-signal.signal(signal.SIGINT, signal_handler)
-
 # variable initializtion
 iobjepoch = 0
 iobjupdate = False
@@ -172,13 +166,18 @@ if args['logname'].lower() == 'runname':
 
 tensorboard = Tensorboard(rootdir + ('/logs/{}'.format(nameFormat)))
 tensorboard.open()
+
+# To end program with ^c
+def signal_handler(signal, frame):
+    global interrupted
+    interrupted = True
+signal.signal(signal.SIGINT, signal_handler)
 interrupted = False
 
-while(True):
+while(not interrupted):
     time.sleep(.25) #for demo
     check_iobj()
     check_ipar()
     check_isen()
-    if interrupted:
-        tensorboard.close()
-        break
+
+tensorboard.close()
