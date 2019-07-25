@@ -121,7 +121,7 @@ def saveHyperParams(tb):
             HP_THICKFACT: run.thickfact,
         }
         Elapsed_min = run.Elapsed_min
-        tb.log_hparams(hparams, Elapsed_min, str(run.Test))
+        tb.log_hparams(hparams, Elapsed_min, id=str(run.Test))
 tensorboard = Tensorboard(rootdir + '/logs/hparam_tuning')
 saveHyperParams(tensorboard)
 tensorboard.open()
