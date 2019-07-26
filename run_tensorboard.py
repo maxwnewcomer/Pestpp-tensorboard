@@ -9,7 +9,7 @@ import pandas as pd
 import tensorflow as tf
 from tensorboard import program
 
-rootdir = os.path.dirname(os.path.abspath(__file__))
+cwd = os.getcwd()
 ap = argparse.ArgumentParser()
 ap.add_argument('--inputdir', required=True,
 	help='path to log directory of PEST++ output files')
@@ -19,7 +19,7 @@ args = vars(ap.parse_args())
 inputdir = args['inputdir']
 
 ###FOR TESTING###
-# inputdir = rootdir + '/input'
+# inputdir = os.path.join(cwd, 'input')
 #################
 
 class Tensorboard:
@@ -159,11 +159,11 @@ if args['logname'].lower() == 'runname':
 	for file in os.listdir(inputdir):
 		if file.endswith(".iobj"):
 			nameFormat = file[:-5]
-	for file in os.listdir(rootdir + '/logs/'):
+	for file in os.listdir(os.path.join(cwd, 'logs')):
 		if file.endswith(nameFormat):
 			nameFormat = nameFormat + ' ' + time.strftime("%b %d %Y %H:%M:%S", time.gmtime())
 
-tensorboard = Tensorboard(rootdir + ('/logs/{}'.format(nameFormat)))
+tensorboard = Tensorboard(os.path.join(cwd, ('/logs/{}'.format(nameFormat))))
 tensorboard.open()
 
 # To end program with ^c

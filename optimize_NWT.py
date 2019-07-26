@@ -1,5 +1,21 @@
+import os
 import time
+import fileinput
+from subprocess import call
+import pandas as pd
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
+
+cwd = os.getcwd()
+# namefile = 'haskell.nam'
+# listfile  = 'haskell.list'
+# initnwt = 'haskell.nwt'
+for file in os.listdir(cwd):
+    if file.endswith('.nam'):
+        namefile = file
+    if file.endswith('.list'):
+        listfile = file
+    if file.endswith('.nwt')
+        initnwt = file
 
 hparams = [
     hp.choice('linmeth',
@@ -29,6 +45,7 @@ hparams = [
     hp.choice('maxiterout', range(100, 401)),
     hp.uniform('thickfact', .000001, .0005),
     hp.choice('iprnwt', [0, 2]),
+    hp.choice('ibotav', [0, 1]),
     hp.choice('options', ['SPECIFIED']),
     hp.uniform('dbdtheta', .4, 1.),
     hp.uniform('dbdkappa', .00001, .0001),
@@ -40,24 +57,66 @@ hparams = [
     hp.uniform('backreduce', .00001, 1.),
 ]
 
+NWTNUM = -1
+try:
+    os.mkdir(os.path.join(cwd, 'nwts'))
+except:
+    os.rmdir(os.path.join(cwd, 'nwts'))
+    os.mkdir(os.path.join(cwd, 'nwts'))
+    print('[INFO] removed previous nwts')
+
 def inputHp2nwt(inputHp):
-    return nwtpath
+    global NWTNUM
+    NWTNUM += 1
+    with open(os.path.join(cwd, 'nwts', ('nwt_{}.nwt'.format(NWTNUM))), 'w') as file:
+        file.write(('{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}'.format(inputHp[1], inputHp[2], inputHp[3], inputHp[4], inputHp[0]['linmeth'], inputHp[5],
+                   inputHp[6], inputHp[7], inputHp[8], inputHp[9], inputHp[10], inputHp[11],
+                   inputHp[12], inputHp[13], inputHp[14], inputHp[15])) + '\n')
+    if inputHp[0]['linmeth'] == 1:
+        with open(os.path.join(cwd, 'nwts', ('nwt_{}.nwt'.format(NWTNUM))), 'a') as file:
+           file.write(('{} {} {} {} {}'.format(inputHp[0]['maxitinner'], inputHp[0]['ilumethod'], inputHp[0]['levfill'],
+                      inputHp[0]['stoptol'], inputHp[0]['msdr'])))
+    elif inputHp[0]['linmeth'] == 2:
+        with open(os.path.join(cwd, 'nwts', ('nwt_{}.nwt'.format(NWTNUM))), 'a') as file:
+           file.write(('{} {} {} {} {} {} {} {} {} {}'.format(inputHp[0]['iacl'], inputHp[0]['norder'], inputHp[0]['level'],
+                      inputHp[0]['north'], inputHp[0]['iredsys'], inputHp[0]['rrctols'],
+                      inputHp[0]['idroptol'], inputHp[0]['epsrn'], inputHp[0]['hclosexmd'],
+                      inputHp[0]['mxiterxmd'])))
+    return os.path.join(cwd, 'nwts', ('nwt_{}.nwt'.format(NWTNUM)))
+
+def trials2csv(trials):
+    df = pd.DataFrame(trials.results).drop('loss', axis=1)
+    df.to_csv(os.path.join(cwd, 'nwt_performance.csv'))
+
+def runModel(pathtonwt, initnwt):
+    # DOES NOT WORK
+    with fileinput.FileInput(os.path.join(cwd, namefile), inplace=True) as file:
+        for line in file:
+            line.replace(os.path.split(initnwt)[-1], os.path.split(pathtonwt)[-1])
+    # works
+    call(['./mfnwt', namefile])
+
+def getdata():
+    return min_elapased, iterations
 
 def objective(inputHp):
-    # model(inputHp2nwt(inputHp))
-    #
-    # read model output
-    # output.accuracy
-    return {'loss': inputHp[2],
+    global initnwt
+    pathtonwt = inputHp2nwt(inputHp)
+    runModel(pathtonwt, initnwt)
+    min_elapased, iterations = getdata()
+    initnwt = pathtonwt
+    return {'loss': min_elapased,
             'status':  STATUS_OK,
             'eval_time': time.time(),
-            'mass_balance': inputHp[1]}
+            'mass_balance': inputHp[1],
+            'min_elapased': inputHp[2],
+            'iterations': 1}
 
 trials = Trials()
 bestHp = fmin(fn=objective,
               space=hparams,
               algo=tpe.suggest,
-              max_evals=50,
+              max_evals=25,
               trials=trials)
 
-print(bestHp)
+trials2csv(trials)
