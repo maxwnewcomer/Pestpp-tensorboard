@@ -2,19 +2,17 @@ import os
 import time
 import fileinput
 from subprocess import call
+from shutil import copyfile, rmtree
 import pandas as pd
-from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
+from hyperopt import fmin, rand, tpe, hp, STATUS_OK, Trials
 
 cwd = os.getcwd()
-# namefile = 'haskell.nam'
-# listfile  = 'haskell.list'
-# initnwt = 'haskell.nwt'
 for file in os.listdir(cwd):
     if file.endswith('.nam'):
         namefile = file
     if file.endswith('.list'):
         listfile = file
-    if file.endswith('.nwt')
+    if file.endswith('.nwt'):
         initnwt = file
 
 hparams = [
@@ -61,7 +59,7 @@ NWTNUM = -1
 try:
     os.mkdir(os.path.join(cwd, 'nwts'))
 except:
-    os.rmdir(os.path.join(cwd, 'nwts'))
+    rmtree(os.path.join(cwd, 'nwts'))
     os.mkdir(os.path.join(cwd, 'nwts'))
     print('[INFO] removed previous nwts')
 
@@ -82,6 +80,7 @@ def inputHp2nwt(inputHp):
                       inputHp[0]['north'], inputHp[0]['iredsys'], inputHp[0]['rrctols'],
                       inputHp[0]['idroptol'], inputHp[0]['epsrn'], inputHp[0]['hclosexmd'],
                       inputHp[0]['mxiterxmd'])))
+    # print('[INFO] pulling nwt from', os.path.join(cwd, 'nwts', ('nwt_{}.nwt'.format(NWTNUM))))
     return os.path.join(cwd, 'nwts', ('nwt_{}.nwt'.format(NWTNUM)))
 
 def trials2csv(trials):
@@ -89,34 +88,87 @@ def trials2csv(trials):
     df.to_csv(os.path.join(cwd, 'nwt_performance.csv'))
 
 def runModel(pathtonwt, initnwt):
-    # DOES NOT WORK
-    with fileinput.FileInput(os.path.join(cwd, namefile), inplace=True) as file:
-        for line in file:
-            line.replace(os.path.split(initnwt)[-1], os.path.split(pathtonwt)[-1])
-    # works
+    copyfile(pathtonwt, initnwt)
     call(['./mfnwt', namefile])
 
 def getdata():
-    return min_elapased, iterations
+    mbline, timeline, iterline = '', '', ''
+    with open(listfile, 'r') as file:
+        mbfound = False
+        for line in reversed(list(file)):
+            if 'Error in Preconditioning' in line:
+                return 99999999, -1, -1
+            if 'PERCENT DISCREPANCY' in line and mbfound == False:
+                mbfound = True
+                mbline = line
+            if 'Elapsed run time' in line:
+                timeline = line
+            if 'OUTER ITERATIONS' in line:
+                iterline = line
+                break
+    for val in mbline.split(' '):
+        try:
+            mass_balance = float(val)
+            break
+        except:
+            pass
+    foundmin, foundsec = False, False
+    min, sec = 0, 0
+    for val in timeline.split(' '):
+        if foundmin == False:
+            try:
+                min = float(val)
+                foundmin = True
+            except:
+                pass
+        else:
+            try:
+                sec = float(val)
+                foundsec = True
+                break
+            except:
+                pass
+    if foundsec:
+        sec_elapsed = min * 60 + sec
+    else:
+        sec_elapsed = min
+
+    for val in iterline.split(' '):
+        try:
+            iterations = float(val)
+            break
+        except:
+            pass
+
+    print('[SECONDS]:', sec_elapsed)
+    print('[MASS BALANCE]:', mass_balance)
+    print('[TOTAL ITERATIONS]:', iterations)
+    return sec_elapsed, iterations, mass_balance
 
 def objective(inputHp):
     global initnwt
     pathtonwt = inputHp2nwt(inputHp)
     runModel(pathtonwt, initnwt)
-    min_elapased, iterations = getdata()
-    initnwt = pathtonwt
-    return {'loss': min_elapased,
+    sec_elapsed, iterations, mass_balance = getdata()
+    return {'loss': sec_elapsed + mass_balance ** 2,
             'status':  STATUS_OK,
             'eval_time': time.time(),
-            'mass_balance': inputHp[1],
-            'min_elapased': inputHp[2],
-            'iterations': 1}
+            'mass_balance': mass_balance,
+            'sec_elapsed': sec_elapsed,
+            'iterations': iterations}
 
 trials = Trials()
+
 bestHp = fmin(fn=objective,
               space=hparams,
               algo=tpe.suggest,
-              max_evals=25,
+              max_evals=100,
               trials=trials)
+
+# bestRandHp = fmin(fn=objective,
+#               space=hparams,
+#               algo=rand.suggest,
+#               max_evals=100,
+#               trials=trials)
 
 trials2csv(trials)

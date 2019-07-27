@@ -9,6 +9,9 @@ import pandas as pd
 import tensorflow as tf
 from tensorboard import program
 
+##Disable annoying tensorboard http requests
+logging.disable(logging.ERROR)
+
 cwd = os.getcwd()
 ap = argparse.ArgumentParser()
 ap.add_argument('--inputdir', required=True,
@@ -163,7 +166,7 @@ if args['logname'].lower() == 'runname':
 		if file.endswith(nameFormat):
 			nameFormat = nameFormat + ' ' + time.strftime("%b %d %Y %H:%M:%S", time.gmtime())
 
-tensorboard = Tensorboard(os.path.join(cwd, ('/logs/{}'.format(nameFormat))))
+tensorboard = Tensorboard(os.path.join(cwd, ('logs/{}'.format(nameFormat))))
 tensorboard.open()
 
 # To end program with ^c
