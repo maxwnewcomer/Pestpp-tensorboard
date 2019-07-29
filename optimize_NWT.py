@@ -3,6 +3,12 @@ import time
 import fileinput
 from subprocess import call
 from shutil import copyfile, rmtree
+import ray
+# from ray.tune import run
+# from ray.tune.schedulers import AsyncHyperBandScheduler
+# from ray.tune.suggest.hyperopt import HyperOptSearch
+import ray.tune as tune
+from ray.tune.hpo_scheduler import HyperOptScheduler
 import pandas as pd
 from hyperopt import fmin, rand, tpe, hp, STATUS_OK, Trials
 
@@ -19,23 +25,23 @@ hparams = [
     hp.choice('linmeth',
         [
             {'linmeth': 1,
-               'maxitinner': hp.choice('maxitinner', range(25, 1001)),
+               'maxitinner': hp.quniform('maxitinner', 25, 1000, 1),
                'ilumethod': hp.choice('ilumethod', [1, 2]),
-               'levfill': hp.choice('levfill', range(0, 11)),
+               'levfill': hp.quniform('levfill', 0, 10, 1),
                'stoptol': hp.uniform('stoptol', .000000000001, .00000001),
-               'msdr': hp.choice('msdr', range(5, 21))
+               'msdr': hp.quniform('msdr', 5, 20, 1)
             },
             {'linmeth': 2,
                 'iacl': hp.choice('iacl', [0, 1, 2]),
                 'norder': hp.choice('norder', [0, 1, 2]),
-                'level': hp.choice('level', range(0, 11)),
-                'north': hp.choice('north', range(2, 11)),
+                'level': hp.quniform('level', 0, 10, 1),
+                'north': hp.quniform('north', 2, 10, 1),
                 'iredsys': hp.choice('iredsys', [0, 1]),
                 'rrctols': hp.uniform('rrctols', 0., .0001),
                 'idroptol': hp.choice('idroptol', [0, 1]),
                 'epsrn': hp.uniform('epsrn', .00005, .001),
                 'hclosexmd': hp.uniform('hclosexmd', .00001, .001),
-                'mxiterxmd': hp.choice('mxiterxmd', range(25,  1001))
+                'mxiterxmd': hp.quniform('mxiterxmd', 25,  100, 1)
             }
         ]),
     hp.uniform('headtol', .01, 5.),
@@ -50,7 +56,7 @@ hparams = [
     hp.uniform('dbdgamma', 0., .0001),
     hp.uniform('momfact', 0., .1),
     hp.choice('backflag', [0, 1]),
-    hp.choice('maxbackiter', range(10,51)),
+    hp.quniform('maxbackiter', 10, 50, 1)),
     hp.uniform('backtol', 1., 2.),
     hp.uniform('backreduce', .00001, 1.),
 ]
@@ -145,30 +151,41 @@ def getdata():
     print('[TOTAL ITERATIONS]:', iterations)
     return sec_elapsed, iterations, mass_balance
 
-def objective(inputHp):
-    global initnwt
+# def objective(inputHp):
+#     global initnwt
+#     pathtonwt = inputHp2nwt(inputHp)
+#     runModel(pathtonwt, initnwt)
+#     sec_elapsed, iterations, mass_balance = getdata()
+#     return {'loss': sec_elapsed + mass_balance ** 2,
+#             'status':  STATUS_OK,
+#             'eval_time': time.time(),
+#             'mass_balance': mass_balance,
+#             'sec_elapsed': sec_elapsed,
+#             'iterations': iterations}
+def objective(config, reporter):
+     global initnwt
     pathtonwt = inputHp2nwt(inputHp)
     runModel(pathtonwt, initnwt)
     sec_elapsed, iterations, mass_balance = getdata()
-    return {'loss': sec_elapsed + mass_balance ** 2,
-            'status':  STATUS_OK,
-            'eval_time': time.time(),
-            'mass_balance': mass_balance,
-            'sec_elapsed': sec_elapsed,
-            'iterations': iterations}
-
-trials = Trials()
-
-bestHp = fmin(fn=objective,
-              space=hparams,
-              algo=tpe.suggest,
-              max_evals=100,
-              trials=trials)
-
-# bestRandHp = fmin(fn=objective,
-#               space=hparams,
-#               algo=rand.suggest,
-#               max_evals=100,
-#               trials=trials)
-
-trials2csv(trials)
+    reporter(sec_elapsed=sec_elapsed,
+             iterations=iterations,
+             mass_balance=mass_balance)
+if __name__ == '__main__':
+    # trials = Trials()
+    # bestHp = fmin(fn=objective,
+    #               space=hparams,
+    #               algo=tpe.suggest,
+    #               max_evals=100,
+    #               trials=trials)
+    # bestRandHp = fmin(fn=objective,
+    #               space=hparams,
+    #               algo=rand.suggest,
+    #               max_evals=100,
+    #               trials=trials)
+    # trials2csv(trials)
+    ray.init()
+    tune.register_trainable('objective', objective)
+    tune.run_experiments({"experiment": {
+        "run": "objective",
+        "repeat": 100,
+        "config": {"space": hparams}}}, scheduler=HyperOptScheduler())
