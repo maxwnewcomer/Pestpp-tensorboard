@@ -3,14 +3,9 @@ import time
 import fileinput
 from subprocess import call
 from shutil import copyfile, rmtree
-import ray
-# from ray.tune import run
-# from ray.tune.schedulers import AsyncHyperBandScheduler
-# from ray.tune.suggest.hyperopt import HyperOptSearch
-import ray.tune as tune
-from ray.tune.hpo_scheduler import HyperOptScheduler
 import pandas as pd
 from hyperopt import fmin, rand, tpe, hp, STATUS_OK, Trials
+from hyperopt.mongoexp import MongoTrials
 
 cwd = os.getcwd()
 for file in os.listdir(cwd):
@@ -151,41 +146,32 @@ def getdata():
     print('[TOTAL ITERATIONS]:', iterations)
     return sec_elapsed, iterations, mass_balance
 
-# def objective(inputHp):
-#     global initnwt
-#     pathtonwt = inputHp2nwt(inputHp)
-#     runModel(pathtonwt, initnwt)
-#     sec_elapsed, iterations, mass_balance = getdata()
-#     return {'loss': sec_elapsed + mass_balance ** 2,
-#             'status':  STATUS_OK,
-#             'eval_time': time.time(),
-#             'mass_balance': mass_balance,
-#             'sec_elapsed': sec_elapsed,
-#             'iterations': iterations}
-def objective(config, reporter):
-     global initnwt
+def objective(inputHp):
+    global initnwt
     pathtonwt = inputHp2nwt(inputHp)
     runModel(pathtonwt, initnwt)
     sec_elapsed, iterations, mass_balance = getdata()
-    reporter(sec_elapsed=sec_elapsed,
-             iterations=iterations,
-             mass_balance=mass_balance)
+    return {'loss': sec_elapsed + mass_balance ** 2,
+            'status':  STATUS_OK,
+            'eval_time': time.time(),
+            'mass_balance': mass_balance,
+            'sec_elapsed': sec_elapsed,
+            'iterations': iterations}
+
 if __name__ == '__main__':
     # trials = Trials()
-    # bestHp = fmin(fn=objective,
-    #               space=hparams,
-    #               algo=tpe.suggest,
-    #               max_evals=100,
-    #               trials=trials)
+    # call(['mongod --dbpath --port 1234'])
+    trials = MongoTrials('/users/max/desktop/work/tfwatermodel/db', exp_key=namefile[0:-4])
+    bestHp = fmin(fn=objective,
+                  space=hparams,
+                  algo=tpe.suggest,
+                  max_evals=100,
+                  trials=trials,
+                  )
+
     # bestRandHp = fmin(fn=objective,
     #               space=hparams,
     #               algo=rand.suggest,
     #               max_evals=100,
     #               trials=trials)
     # trials2csv(trials)
-    ray.init()
-    tune.register_trainable('objective', objective)
-    tune.run_experiments({"experiment": {
-        "run": "objective",
-        "repeat": 100,
-        "config": {"space": hparams}}}, scheduler=HyperOptScheduler())
