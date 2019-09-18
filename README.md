@@ -4,7 +4,7 @@ The goal of this project was to provide users with a more visual understanding o
 **run_tensorboard.py**  
 run_tensorboard.py provides users with the ability to see live loss, metric, and weight tracking  
 *--inputdir is required when running*  
-*--logname is for logname customization*  
+*--logname is not required, but can be used for logname customization*  
 
 ##### How can you use this resource?  
 - By tracking weights and loss live, you can easily stop a failed run before wasting possible hours of computation time
